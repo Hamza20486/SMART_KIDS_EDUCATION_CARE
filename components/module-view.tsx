@@ -5,6 +5,7 @@ import { CreateForm } from "./create-form";
 import { useI18n } from "./i18n-provider";
 import { translateLegacyPhrase } from "@/lib/i18n/legacy";
 import { formatDate, formatMoney } from "@/lib/i18n/format";
+import { Loader2, Inbox } from "lucide-react";
 
 type Field = {
   name: string;
@@ -43,44 +44,76 @@ export function ModuleView({
   const { t, locale } = useI18n();
   const [rows, setRows] = useState<Record<string, unknown>[]>([]);
   const [loading, setLoading] = useState(true);
+
   const load = useCallback(async () => {
     setLoading(true);
     const response = await fetch(endpoint);
     if (response.ok) setRows(await response.json());
     setLoading(false);
   }, [endpoint]);
+
   useEffect(() => void load(), [load]);
+
   return (
     <>
-      <div className="pagehead"><div><h1>{title}</h1><p className="muted">{subtitle}</p></div></div>
+      <div className="pagehead">
+        <div>
+          <h1>{title}</h1>
+          <p className="muted">{subtitle}</p>
+        </div>
+      </div>
+
       {fields && (
         <div onSubmitCapture={() => setTimeout(load, 500)}>
-          <CreateForm endpoint={endpoint} title={formTitle || `${t("common.add")} — ${title}`} fields={fields} />
+          <CreateForm
+            endpoint={endpoint}
+            title={formTitle || `${t("common.add")} — ${title}`}
+            fields={fields}
+          />
         </div>
       )}
+
       {loading ? (
-        <p>{t("common.loading")}</p>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: 48, color: "var(--muted)" }}>
+          <Loader2 size={24} className="animate-spin" style={{ marginRight: 10 }} />
+          <span>{t("common.loading")}</span>
+        </div>
       ) : (
-        <table className="table">
-          <thead><tr>{columns.map((column) => <th key={column.key}>{translateLegacyPhrase(column.label, t)}</th>)}</tr></thead>
-          <tbody>
-            {rows.length === 0 ? (
-              <tr><td colSpan={columns.length} className="muted">{t("common.noData")}</td></tr>
-            ) : (
-              rows.map((row, index) => (
-                <tr key={String(row.id || index)}>
-                  {columns.map((column) => {
-                    const value = valueAt(row, column.key);
-                    let text = value == null ? "—" : String(value);
-                    if (column.format === "date" && value) text = formatDate(locale, String(value));
-                    if (column.format === "money" && value != null) text = formatMoney(locale, Number(value));
-                    return <td key={column.key}>{text}</td>;
-                  })}
+        <div className="table-container">
+          <table className="table">
+            <thead>
+              <tr>
+                {columns.map((column) => (
+                  <th key={column.key}>{translateLegacyPhrase(column.label, t)}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {rows.length === 0 ? (
+                <tr>
+                  <td colSpan={columns.length} style={{ textAlign: "center", padding: 48 }}>
+                    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8, color: "var(--muted)" }}>
+                      <Inbox size={32} strokeWidth={1.5} />
+                      <span>{t("common.noData")}</span>
+                    </div>
+                  </td>
                 </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+              ) : (
+                rows.map((row, index) => (
+                  <tr key={String(row.id || index)}>
+                    {columns.map((column) => {
+                      const value = valueAt(row, column.key);
+                      let text = value == null ? "—" : String(value);
+                      if (column.format === "date" && value) text = formatDate(locale, String(value));
+                      if (column.format === "money" && value != null) text = formatMoney(locale, Number(value));
+                      return <td key={column.key}>{text}</td>;
+                    })}
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
       )}
     </>
   );
