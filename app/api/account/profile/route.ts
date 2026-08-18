@@ -1,0 +1,3 @@
+import{NextResponse}from"next/server";import{z}from"zod";import{prisma}from"@/lib/prisma";import{requireUser}from"@/lib/auth";import{apiError}from"@/lib/api";import{audit}from"@/lib/audit";
+export async function GET(){try{const u=await requireUser();return NextResponse.json(await prisma.user.findUnique({where:{id:u.id},select:{name:true,email:true,phone:true,role:true,lastLoginAt:true}}))}catch(e){return apiError(e)}}
+export async function PATCH(r:Request){try{const u=await requireUser();const d=z.object({name:z.string().min(2).max(100),phone:z.string().max(30).nullable().optional()}).parse(await r.json());await prisma.user.update({where:{id:u.id},data:d});await audit(u,"UPDATE","UserProfile",u.id);return NextResponse.json({ok:true})}catch(e){return apiError(e)}}

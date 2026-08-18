@@ -1,0 +1,2 @@
+import{NextResponse}from"next/server";import{prisma}from"@/lib/prisma";import{requireUser}from"@/lib/auth";import{apiError}from"@/lib/api";
+export async function POST(){try{const user=await requireUser();await prisma.$transaction([prisma.user.update({where:{id:user.id},data:{sessionVersion:{increment:1}}}),prisma.auditLog.create({data:{organizationId:user.organizationId,userId:user.id,action:"SESSIONS_REVOKE",entity:"User",entityId:user.id}})]);return NextResponse.json({ok:true})}catch(e){return apiError(e)}}

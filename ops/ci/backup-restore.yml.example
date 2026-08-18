@@ -1,0 +1,85 @@
+name: Backup and restore drill
+
+on:
+  schedule:
+    - cron: "17 2 * * *"
+    - cron: "43 3 1 * *"
+  workflow_dispatch:
+    inputs:
+      restore_drill:
+        description: Restore the newest backup into clean PostgreSQL and run smoke tests
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    environment: production-backup
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: smart-kids-postgres
+    env:
+      PRISMA_MIGRATION_DATABASE_URL: ${{ secrets.PRODUCTION_DIRECT_DATABASE_URL }}
+      BACKUP_R2_ACCOUNT_ID: ${{ secrets.BACKUP_R2_ACCOUNT_ID }}
+      BACKUP_R2_ACCESS_KEY_ID: ${{ secrets.BACKUP_R2_ACCESS_KEY_ID }}
+      BACKUP_R2_SECRET_ACCESS_KEY: ${{ secrets.BACKUP_R2_SECRET_ACCESS_KEY }}
+      R2_BACKUP_BUCKET: ${{ secrets.R2_BACKUP_BUCKET }}
+      BACKUP_RETENTION_DAYS: "90"
+      SENTRY_ENVIRONMENT: production
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: smart-kids-postgres/package-lock.json
+      - run: sudo apt-get update && sudo apt-get install --yes postgresql-client
+      - run: npm ci
+      - run: npm run ops:backup
+
+  restore-drill:
+    if: inputs.restore_drill == true || github.event.schedule == '43 3 1 * *'
+    needs: backup
+    runs-on: ubuntu-latest
+    environment: restore-drill
+    timeout-minutes: 25
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: restore
+          POSTGRES_PASSWORD: restore
+          POSTGRES_DB: smart_kids_restore_drill
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U restore -d smart_kids_restore_drill"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+    defaults:
+      run:
+        working-directory: smart-kids-postgres
+    env:
+      RESTORE_DATABASE_URL: postgresql://restore:restore@127.0.0.1:5432/smart_kids_restore_drill
+      DATABASE_URL: postgresql://restore:restore@127.0.0.1:5432/smart_kids_restore_drill
+      PRISMA_MIGRATION_DATABASE_URL: postgresql://restore:restore@127.0.0.1:5432/smart_kids_restore_drill
+      BACKUP_OBJECT_KEY: latest
+      BACKUP_R2_ACCOUNT_ID: ${{ secrets.BACKUP_R2_ACCOUNT_ID }}
+      BACKUP_R2_ACCESS_KEY_ID: ${{ secrets.BACKUP_R2_ACCESS_KEY_ID }}
+      BACKUP_R2_SECRET_ACCESS_KEY: ${{ secrets.BACKUP_R2_SECRET_ACCESS_KEY }}
+      R2_BACKUP_BUCKET: ${{ secrets.R2_BACKUP_BUCKET }}
+      SENTRY_ENVIRONMENT: production
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: smart-kids-postgres/package-lock.json
+      - run: sudo apt-get update && sudo apt-get install --yes postgresql-client
+      - run: npm ci
+      - run: npm run ops:restore

@@ -1,0 +1,2 @@
+import { describe,it,expect } from "vitest";import { childSchema,classSchema,parentSchema } from "@/lib/validation";
+describe("domain validation",()=>{it("accepts a valid child",()=>expect(childSchema.safeParse({firstName:"Yasmine",lastName:"Bennani",birthDate:"2022-04-10"}).success).toBe(true));it("rejects invalid capacity",()=>expect(classSchema.safeParse({name:"A",capacity:100}).success).toBe(false));it("rejects invalid parent email",()=>expect(parentSchema.safeParse({firstName:"Sara",lastName:"Bennani",phone:"0600000000",email:"bad"}).success).toBe(false))});

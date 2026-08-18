@@ -1,0 +1,2 @@
+import{describe,it,expect}from"vitest";import{parseDateKey,dateKey,moroccoDateKey}from"@/lib/date";
+describe("attendance date keys",()=>{it("round trips valid calendar dates",()=>expect(dateKey(parseDateKey("2026-08-16"))).toBe("2026-08-16"));it("rejects malformed and impossible dates",()=>{expect(()=>parseDateKey("16-08-2026")).toThrow();expect(()=>parseDateKey("2026-02-31")).toThrow()});it("formats Morocco's local date",()=>expect(moroccoDateKey(new Date("2026-08-16T23:30:00Z"))).toBe("2026-08-17"))});

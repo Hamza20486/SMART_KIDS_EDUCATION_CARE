@@ -1,0 +1,2 @@
+import { describe,it,expect } from "vitest";import { attendanceSchema } from "@/lib/validation";
+describe("attendance validation",()=>{it("accepts supported status",()=>expect(attendanceSchema.safeParse({childId:"child-1",date:"2026-08-16",status:"PRESENT"}).success).toBe(true));it("rejects unsupported status",()=>expect(attendanceSchema.safeParse({childId:"child-1",date:"2026-08-16",status:"UNKNOWN"}).success).toBe(false))});

@@ -1,0 +1,2 @@
+export function rangesOverlap(aStart:Date,aEnd:Date,bStart:Date,bEnd:Date){return aStart<=bEnd&&aEnd>=bStart}
+export function datesInclusive(start:Date,end:Date,maxDays=91){const result:Date[]=[];for(let day=new Date(start);day<=end;day=new Date(day.getTime()+86400000)){if(result.length>=maxDays)throw new Error("Date range too large");const normalized=new Date(day);normalized.setUTCHours(0,0,0,0);result.push(normalized)}return result}

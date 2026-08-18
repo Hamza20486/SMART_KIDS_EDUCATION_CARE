@@ -1,0 +1,87 @@
+name: Phase 15 testing
+
+on:
+  push:
+    branches:
+      - arena/01a00f51-education-care
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: phase15-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: smartkids
+          POSTGRES_PASSWORD: smartkids_test
+          POSTGRES_DB: smart_kids_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U smartkids -d smart_kids_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+    defaults:
+      run:
+        working-directory: smart-kids-postgres
+    env:
+      DATABASE_URL: postgresql://smartkids:smartkids_test@127.0.0.1:5432/smart_kids_test?schema=public
+      TEST_DATABASE_URL: postgresql://smartkids:smartkids_test@127.0.0.1:5432/smart_kids_test?schema=public
+      AUTH_SECRET: phase15-ci-only-secret-that-is-never-used-outside-tests
+      AUTH_TRUST_HOST: "true"
+      APP_URL: http://127.0.0.1:3000
+      PLAYWRIGHT_BASE_URL: http://127.0.0.1:3000
+      RESEND_API_KEY: ""
+      INNGEST_EVENT_KEY: ""
+      INNGEST_SIGNING_KEY: ""
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: smart-kids-postgres/package-lock.json
+
+      - name: Install dependencies and generate Prisma Client
+        run: npm ci
+
+      - name: Apply migrations to isolated PostgreSQL
+        run: npm run db:deploy
+
+      - name: Lint and validate translations
+        run: npm run lint && npm run i18n:check
+
+      - name: Run unit tests and coverage gate
+        run: npm run test:coverage
+
+      - name: Run PostgreSQL integration tests
+        run: npm run test:integration
+
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Run end-to-end and HTTP security tests
+        run: npm run test:e2e
+
+      - name: Upload Playwright report on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: smart-kids-postgres/playwright-report
+          if-no-files-found: ignore
+          retention-days: 7

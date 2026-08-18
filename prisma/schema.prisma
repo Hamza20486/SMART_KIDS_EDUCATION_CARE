@@ -1,0 +1,890 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Organization {
+  id                    String                   @id @default(cuid())
+  name                  String
+  slug                  String                   @unique
+  phone                 String?
+  email                 String?
+  address               String?
+  city                  String                   @default("Casablanca")
+  country               String                   @default("MA")
+  currency              String                   @default("MAD")
+  timezone              String                   @default("Africa/Casablanca")
+  defaultLanguage       String                   @default("fr")
+  active                Boolean                  @default(true)
+  users                 User[]
+  parents               Parent[]
+  classes               ClassRoom[]
+  children              Child[]
+  classTeachers         ClassTeacher[]
+  parentChildren        ParentChild[]
+  attendances           Attendance[]
+  pickupAuthorizations  AuthorizedPickupPerson[]
+  attendanceCorrections AttendanceCorrection[]
+  activities            Activity[]
+  activityMedia         ActivityMedia[]
+  mediaConsents         MediaConsent[]
+  homework              Homework[]
+  homeworkAttachments   HomeworkAttachment[]
+  homeworkAssignments   HomeworkAssignment[]
+  submissions           HomeworkSubmission[]
+  absenceRequests       AbsenceRequest[]
+  complaints            Complaint[]
+  complaintMessages     ComplaintMessage[]
+  feeCategories         FeeCategory[]
+  payments              Payment[]
+  paymentTransactions   PaymentTransaction[]
+  paymentReceipts       PaymentReceipt[]
+  receiptSequences      ReceiptSequence[]
+  notifications         Notification[]
+  notificationDeliveries NotificationDelivery[]
+  notificationPreferences NotificationPreference[]
+  outboxEvents          OutboxEvent[]
+  announcements         Announcement[]
+  auditLogs             AuditLog[]
+  invitations           InvitationToken[]
+  subscriptions         Subscription[]
+  subscriptionEvents    SubscriptionEvent[]
+  createdAt             DateTime                 @default(now())
+  updatedAt             DateTime                 @updatedAt
+  absenceAttachments    AbsenceAttachment[]
+  complaintAttachments  ComplaintAttachment[]
+}
+
+model Role {
+  code        String   @id
+  name        String
+  description String?
+  permissions Json
+  users       User[]
+  createdAt   DateTime @default(now())
+}
+
+model User {
+  id                             String                   @id @default(cuid())
+  organizationId                 String
+  organization                   Organization             @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  role                           String
+  roleDefinition                 Role                     @relation(fields: [role], references: [code])
+  name                           String
+  email                          String                   @unique
+  phone                          String?
+  passwordHash                   String
+  active                         Boolean                  @default(true)
+  emailVerifiedAt                DateTime?
+  mustChangePassword             Boolean                  @default(false)
+  sessionVersion                 Int                      @default(0)
+  lastLoginAt                    DateTime?
+  failedLoginCount               Int                      @default(0)
+  lockedUntil                    DateTime?
+  parent                         Parent?
+  classAssignments               ClassTeacher[]
+  recordedAttendance             Attendance[]             @relation("AttendanceRecorder")
+  createdActivities              Activity[]               @relation("ActivityCreator")
+  createdHomework                Homework[]               @relation("HomeworkCreator")
+  reviewedAbsences               AbsenceRequest[]         @relation("AbsenceReviewer")
+  assignedComplaints             Complaint[]              @relation("ComplaintAssignee")
+  complaintMessages              ComplaintMessage[]
+  issuedReceipts                 PaymentReceipt[]
+  notifications                  Notification[]
+  notificationPreferences        NotificationPreference[]
+  announcements                  Announcement[]
+  auditLogs                      AuditLog[]
+  sentInvitations                InvitationToken[]        @relation("InvitationSender")
+  passwordResetTokens            PasswordResetToken[]
+  createdPickupAuthorizations    AuthorizedPickupPerson[] @relation("PickupCreator")
+  requestedAttendanceCorrections AttendanceCorrection[]   @relation("CorrectionRequester")
+  approvedAttendanceCorrections  AttendanceCorrection[]   @relation("CorrectionApprover")
+  uploadedActivityMedia          ActivityMedia[]          @relation("MediaUploader")
+  uploadedHomeworkAttachments    HomeworkAttachment[]     @relation("HomeworkAttachmentUploader")
+  reviewedHomeworkSubmissions    HomeworkSubmission[]     @relation("HomeworkReviewer")
+  uploadedAbsenceAttachments     AbsenceAttachment[]      @relation("AbsenceAttachmentUploader")
+  uploadedComplaintAttachments   ComplaintAttachment[]    @relation("ComplaintAttachmentUploader")
+  recordedPaymentTransactions    PaymentTransaction[]     @relation("PaymentRecorder")
+  subscriptionEvents             SubscriptionEvent[]      @relation("SubscriptionEventActor")
+  createdAt                      DateTime                 @default(now())
+  updatedAt                      DateTime                 @updatedAt
+
+  @@unique([organizationId, email])
+  @@unique([organizationId, id])
+  @@index([organizationId, role])
+}
+
+model Parent {
+  id                   String                   @id @default(cuid())
+  organizationId       String
+  organization         Organization             @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  userId               String?                  @unique
+  user                 User?                    @relation(fields: [organizationId, userId], references: [organizationId, id], onDelete: Restrict)
+  firstName            String
+  lastName             String
+  phone                String
+  email                String?
+  relationship         String                   @default("Parent")
+  active               Boolean                  @default(true)
+  children             ParentChild[]
+  absenceRequests      AbsenceRequest[]
+  complaints           Complaint[]
+  payments             Payment[]
+  pickupAuthorizations AuthorizedPickupPerson[]
+  mediaConsents        MediaConsent[]
+  createdAt            DateTime                 @default(now())
+  updatedAt            DateTime                 @updatedAt
+
+  @@unique([organizationId, phone])
+  @@unique([organizationId, userId])
+  @@unique([organizationId, id])
+  @@index([organizationId])
+}
+
+model ClassRoom {
+  id             String         @id @default(cuid())
+  organizationId String
+  organization   Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  name           String
+  capacity       Int            @default(20)
+  ageGroup       String?
+  academicYear   String?
+  active         Boolean        @default(true)
+  children       Child[]
+  teachers       ClassTeacher[]
+  activities     Activity[]
+  homework       Homework[]
+  announcements  Announcement[]
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  @@unique([organizationId, name])
+  @@unique([organizationId, id])
+  @@index([organizationId])
+}
+
+model ClassTeacher {
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  classId        String
+  class          ClassRoom    @relation(fields: [organizationId, classId], references: [organizationId, id], onDelete: Cascade)
+  teacherId      String
+  teacher        User         @relation(fields: [organizationId, teacherId], references: [organizationId, id], onDelete: Cascade)
+  isPrimary      Boolean      @default(false)
+  createdAt      DateTime     @default(now())
+
+  @@id([classId, teacherId])
+  @@index([organizationId, teacherId])
+}
+
+model Child {
+  id                   String                   @id @default(cuid())
+  organizationId       String
+  organization         Organization             @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  classId              String?
+  class                ClassRoom?               @relation(fields: [organizationId, classId], references: [organizationId, id], onDelete: Restrict)
+  firstName            String
+  lastName             String
+  birthDate            DateTime
+  enrollmentDate       DateTime                 @default(now())
+  allergies            String?
+  notes                String?
+  active               Boolean                  @default(true)
+  parents              ParentChild[]
+  attendances          Attendance[]
+  pickupAuthorizations AuthorizedPickupPerson[]
+  mediaConsents        MediaConsent[]
+  activities           Activity[]
+  homeworkAssignments  HomeworkAssignment[]
+  submissions          HomeworkSubmission[]
+  absenceRequests      AbsenceRequest[]
+  complaints           Complaint[]
+  payments             Payment[]
+  createdAt            DateTime                 @default(now())
+  updatedAt            DateTime                 @updatedAt
+
+  @@unique([organizationId, id])
+  @@index([organizationId, classId])
+}
+
+model ParentChild {
+  organizationId          String
+  organization            Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  parentId                String
+  parent                  Parent       @relation(fields: [organizationId, parentId], references: [organizationId, id], onDelete: Cascade)
+  childId                 String
+  child                   Child        @relation(fields: [organizationId, childId], references: [organizationId, id], onDelete: Cascade)
+  relationship            String       @default("Parent")
+  primary                 Boolean      @default(false)
+  canPickup               Boolean      @default(true)
+  canViewPayments         Boolean      @default(true)
+  canReceiveNotifications Boolean      @default(true)
+  createdAt               DateTime     @default(now())
+
+  @@id([parentId, childId])
+  @@index([organizationId, childId])
+}
+
+model Attendance {
+  id                    String                  @id @default(cuid())
+  organizationId        String
+  organization          Organization            @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  childId               String
+  child                 Child                   @relation(fields: [organizationId, childId], references: [organizationId, id], onDelete: Cascade)
+  date                  DateTime
+  status                String                  @default("PRESENT")
+  arrivalAt             DateTime?
+  departureAt           DateTime?
+  pickupPerson          String?
+  pickupAuthorizationId String?
+  pickupAuthorization   AuthorizedPickupPerson? @relation(fields: [organizationId, pickupAuthorizationId], references: [organizationId, id], onDelete: Restrict)
+  note                  String?
+  corrections           AttendanceCorrection[]
+  recordedById          String
+  recordedBy            User                    @relation("AttendanceRecorder", fields: [organizationId, recordedById], references: [organizationId, id])
+  createdAt             DateTime                @default(now())
+  updatedAt             DateTime                @updatedAt
+
+  @@unique([organizationId, childId, date])
+  @@unique([organizationId, id])
+  @@index([organizationId, date])
+}
+
+model AuthorizedPickupPerson {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  childId        String
+  child          Child        @relation(fields: [organizationId, childId], references: [organizationId, id], onDelete: Cascade)
+  parentId       String?
+  parent         Parent?      @relation(fields: [organizationId, parentId], references: [organizationId, id], onDelete: Restrict)
+  name           String
+  relationship   String
+  phone          String?
+  idLastFour     String?
+  active         Boolean      @default(true)
+  createdById    String
+  createdBy      User         @relation("PickupCreator", fields: [organizationId, createdById], references: [organizationId, id])
+  attendances    Attendance[]
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@unique([organizationId, id])
+  @@index([organizationId, childId, active])
+}
+
+model AttendanceCorrection {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  attendanceId   String
+  attendance     Attendance   @relation(fields: [organizationId, attendanceId], references: [organizationId, id], onDelete: Cascade)
+  requestedById  String
+  requestedBy    User         @relation("CorrectionRequester", fields: [organizationId, requestedById], references: [organizationId, id])
+  approvedById   String?
+  approvedBy     User?        @relation("CorrectionApprover", fields: [organizationId, approvedById], references: [organizationId, id], onDelete: Restrict)
+  beforeData     Json
+  proposedData   Json
+  reason         String
+  status         String       @default("PENDING")
+  reviewedAt     DateTime?
+  reviewNote     String?
+  createdAt      DateTime     @default(now())
+
+  @@index([organizationId, status, createdAt])
+}
+
+model Activity {
+  id               String          @id @default(cuid())
+  organizationId   String
+  organization     Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  classId          String?
+  class            ClassRoom?      @relation(fields: [organizationId, classId], references: [organizationId, id], onDelete: Restrict)
+  childId          String?
+  child            Child?          @relation(fields: [organizationId, childId], references: [organizationId, id], onDelete: Restrict)
+  title            String
+  description      String
+  activityDate     DateTime
+  visibleToParents Boolean         @default(false)
+  publishedAt      DateTime?
+  active           Boolean         @default(true)
+  createdById      String
+  createdBy        User            @relation("ActivityCreator", fields: [organizationId, createdById], references: [organizationId, id])
+  media            ActivityMedia[]
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+
+  @@unique([organizationId, id])
+  @@index([organizationId, activityDate])
+}
+
+model ActivityMedia {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  activityId     String
+  activity       Activity     @relation(fields: [organizationId, activityId], references: [organizationId, id], onDelete: Cascade)
+  storageKey     String
+  mimeType       String
+  sizeBytes      Int
+  checksumSha256 String
+  width          Int?
+  height         Int?
+  caption        String?
+  scanStatus     String       @default("CLEAN")
+  uploadedById   String
+  uploadedBy     User         @relation("MediaUploader", fields: [organizationId, uploadedById], references: [organizationId, id])
+  deletedAt      DateTime?
+  createdAt      DateTime     @default(now())
+
+  @@index([organizationId, activityId, deletedAt])
+}
+
+model MediaConsent {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  parentId       String
+  parent         Parent       @relation(fields: [organizationId, parentId], references: [organizationId, id], onDelete: Cascade)
+  childId        String
+  child          Child        @relation(fields: [organizationId, childId], references: [organizationId, id], onDelete: Cascade)
+  scope          String       @default("ACTIVITY_MEDIA")
+  status         String       @default("GRANTED")
+  grantedAt      DateTime     @default(now())
+  revokedAt      DateTime?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@unique([organizationId, parentId, childId, scope])
+  @@index([organizationId, childId, status])
+}
+
+model Homework {
+  id             String               @id @default(cuid())
+  organizationId String
+  organization   Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  classId        String
+  class          ClassRoom            @relation(fields: [organizationId, classId], references: [organizationId, id], onDelete: Cascade)
+  title          String
+  description    String
+  dueDate        DateTime
+  status         String               @default("DRAFT")
+  publishedAt    DateTime?
+  active         Boolean              @default(true)
+  createdById    String
+  createdBy      User                 @relation("HomeworkCreator", fields: [organizationId, createdById], references: [organizationId, id])
+  attachments    HomeworkAttachment[]
+  assignments    HomeworkAssignment[]
+  submissions    HomeworkSubmission[]
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
+
+  @@unique([organizationId, id])
+  @@index([organizationId, classId, dueDate])
+}
+
+model HomeworkAttachment {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  homeworkId     String
+  homework       Homework     @relation(fields: [organizationId, homeworkId], references: [organizationId, id], onDelete: Cascade)
+  storageKey     String
+  originalName   String
+  mimeType       String
+  sizeBytes      Int
+  checksumSha256 String
+  uploadedById   String
+  uploadedBy     User         @relation("HomeworkAttachmentUploader", fields: [organizationId, uploadedById], references: [organizationId, id])
+  deletedAt      DateTime?
+  createdAt      DateTime     @default(now())
+
+  @@index([organizationId, homeworkId, deletedAt])
+}
+
+model HomeworkAssignment {
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  homeworkId     String
+  homework       Homework     @relation(fields: [organizationId, homeworkId], references: [organizationId, id], onDelete: Cascade)
+  childId        String
+  child          Child        @relation(fields: [organizationId, childId], references: [organizationId, id], onDelete: Cascade)
+  required       Boolean      @default(true)
+  note           String?
+  createdAt      DateTime     @default(now())
+
+  @@id([homeworkId, childId])
+  @@index([organizationId, childId])
+}
+
+model HomeworkSubmission {
+  id              String       @id @default(cuid())
+  organizationId  String
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  homeworkId      String
+  homework        Homework     @relation(fields: [organizationId, homeworkId], references: [organizationId, id], onDelete: Cascade)
+  childId         String
+  child           Child        @relation(fields: [organizationId, childId], references: [organizationId, id], onDelete: Cascade)
+  status          String       @default("SUBMITTED")
+  parentComment   String?
+  attachmentKey   String?
+  attachmentName  String?
+  attachmentMime  String?
+  attachmentSize  Int?
+  attachmentHash  String?
+  version         Int          @default(1)
+  teacherFeedback String?
+  reviewedById    String?
+  reviewedBy      User?        @relation("HomeworkReviewer", fields: [organizationId, reviewedById], references: [organizationId, id], onDelete: Restrict)
+  reviewedAt      DateTime?
+  submittedAt     DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  @@unique([homeworkId, childId])
+  @@index([organizationId, status])
+}
+
+model AbsenceRequest {
+  id                 String              @id @default(cuid())
+  organizationId     String
+  organization       Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  parentId           String
+  parent             Parent              @relation(fields: [organizationId, parentId], references: [organizationId, id], onDelete: Cascade)
+  childId            String
+  child              Child               @relation(fields: [organizationId, childId], references: [organizationId, id], onDelete: Cascade)
+  startDate          DateTime
+  endDate            DateTime
+  reason             String
+  status             String              @default("PENDING")
+  reviewedById       String?
+  reviewedBy         User?               @relation("AbsenceReviewer", fields: [organizationId, reviewedById], references: [organizationId, id], onDelete: Restrict)
+  reviewNote         String?
+  reviewedAt         DateTime?
+  cancelledAt        DateTime?
+  attendanceSyncedAt DateTime?
+  attachments        AbsenceAttachment[]
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+
+  @@unique([organizationId, id])
+  @@index([organizationId, status])
+  @@index([organizationId, childId, startDate, endDate])
+}
+
+model AbsenceAttachment {
+  id               String         @id @default(cuid())
+  organizationId   String
+  organization     Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  absenceRequestId String
+  absenceRequest   AbsenceRequest @relation(fields: [organizationId, absenceRequestId], references: [organizationId, id], onDelete: Cascade)
+  storageKey       String
+  originalName     String
+  mimeType         String
+  sizeBytes        Int
+  checksumSha256   String
+  uploadedById     String
+  uploadedBy       User           @relation("AbsenceAttachmentUploader", fields: [organizationId, uploadedById], references: [organizationId, id])
+  deletedAt        DateTime?
+  createdAt        DateTime       @default(now())
+
+  @@index([organizationId, absenceRequestId, deletedAt])
+}
+
+model Complaint {
+  id             String                @id @default(cuid())
+  organizationId String
+  organization   Organization          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  reference      String
+  parentId       String
+  parent         Parent                @relation(fields: [organizationId, parentId], references: [organizationId, id], onDelete: Cascade)
+  childId        String?
+  child          Child?                @relation(fields: [organizationId, childId], references: [organizationId, id], onDelete: Restrict)
+  category       String
+  subject        String
+  status         String                @default("OPEN")
+  priority       String                @default("NORMAL")
+  slaDueAt       DateTime
+  resolvedAt     DateTime?
+  closedAt       DateTime?
+  assignedToId   String?
+  assignedTo     User?                 @relation("ComplaintAssignee", fields: [organizationId, assignedToId], references: [organizationId, id], onDelete: Restrict)
+  messages       ComplaintMessage[]
+  attachments    ComplaintAttachment[]
+  createdAt      DateTime              @default(now())
+  updatedAt      DateTime              @updatedAt
+
+  @@unique([organizationId, id])
+  @@unique([organizationId, reference])
+  @@index([organizationId, status, priority])
+  @@index([organizationId, slaDueAt])
+}
+
+model ComplaintMessage {
+  id             String                @id @default(cuid())
+  organizationId String
+  organization   Organization          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  complaintId    String
+  complaint      Complaint             @relation(fields: [organizationId, complaintId], references: [organizationId, id], onDelete: Cascade)
+  senderId       String
+  sender         User                  @relation(fields: [organizationId, senderId], references: [organizationId, id])
+  message        String
+  internal       Boolean               @default(false)
+  attachments    ComplaintAttachment[]
+  editedAt       DateTime?
+  createdAt      DateTime              @default(now())
+
+  @@unique([organizationId, id])
+  @@index([organizationId, complaintId, createdAt])
+}
+
+model ComplaintAttachment {
+  id             String           @id @default(cuid())
+  organizationId String
+  organization   Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  complaintId    String
+  complaint      Complaint        @relation(fields: [organizationId, complaintId], references: [organizationId, id], onDelete: Cascade)
+  messageId      String
+  message        ComplaintMessage @relation(fields: [organizationId, messageId], references: [organizationId, id], onDelete: Cascade)
+  storageKey     String
+  originalName   String
+  mimeType       String
+  sizeBytes      Int
+  checksumSha256 String
+  uploadedById   String
+  uploadedBy     User             @relation("ComplaintAttachmentUploader", fields: [organizationId, uploadedById], references: [organizationId, id])
+  deletedAt      DateTime?
+  createdAt      DateTime         @default(now())
+
+  @@index([organizationId, complaintId, messageId, deletedAt])
+}
+
+model FeeCategory {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  name           String
+  code           String
+  active         Boolean      @default(true)
+  payments       Payment[]
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@unique([organizationId, code])
+  @@unique([organizationId, id])
+}
+
+model Payment {
+  id                  String               @id @default(cuid())
+  organizationId      String
+  organization        Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  parentId            String
+  parent              Parent               @relation(fields: [organizationId, parentId], references: [organizationId, id], onDelete: Restrict)
+  childId             String
+  child               Child                @relation(fields: [organizationId, childId], references: [organizationId, id], onDelete: Restrict)
+  categoryId          String?
+  category            FeeCategory?         @relation(fields: [organizationId, categoryId], references: [organizationId, id], onDelete: Restrict)
+  academicPeriod      String?
+  description         String?
+  grossAmountCentimes Int
+  discountCentimes    Int                  @default(0)
+  amountCentimes      Int
+  currency            String               @default("MAD")
+  dueDate             DateTime
+  paidAt              DateTime?
+  status              String               @default("PENDING")
+  installmentNumber   Int?
+  installmentCount    Int?
+  reference           String?
+  transactions        PaymentTransaction[]
+  receipts            PaymentReceipt[]
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+
+  @@unique([organizationId, id])
+  @@index([organizationId, status, dueDate])
+  @@index([organizationId, academicPeriod])
+}
+
+model PaymentTransaction {
+  id             String           @id @default(cuid())
+  organizationId String
+  organization   Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  paymentId      String
+  payment        Payment          @relation(fields: [organizationId, paymentId], references: [organizationId, id], onDelete: Restrict)
+  amountCentimes Int
+  method         String
+  reference      String?
+  notes          String?
+  recordedById   String
+  recordedBy     User             @relation("PaymentRecorder", fields: [organizationId, recordedById], references: [organizationId, id])
+  paidAt         DateTime         @default(now())
+  receipts       PaymentReceipt[]
+  createdAt      DateTime         @default(now())
+
+  @@unique([organizationId, id])
+  @@index([organizationId, paymentId, paidAt])
+}
+
+model PaymentReceipt {
+  id             String              @id @default(cuid())
+  organizationId String
+  organization   Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  paymentId      String
+  payment        Payment             @relation(fields: [organizationId, paymentId], references: [organizationId, id], onDelete: Restrict)
+  transactionId  String?
+  transaction    PaymentTransaction? @relation(fields: [organizationId, transactionId], references: [organizationId, id], onDelete: Restrict)
+  receiptNumber  String
+  storageKey     String?
+  status         String              @default("PENDING")
+  voidedAt       DateTime?
+  voidReason     String?
+  reissuedFromId String?
+  reissuedFrom   PaymentReceipt?     @relation("ReceiptReissue", fields: [reissuedFromId], references: [id], onDelete: Restrict)
+  reissues       PaymentReceipt[]    @relation("ReceiptReissue")
+  issuedById     String
+  issuedBy       User                @relation(fields: [organizationId, issuedById], references: [organizationId, id])
+  issuedAt       DateTime            @default(now())
+
+  @@unique([organizationId, receiptNumber])
+  @@index([organizationId, paymentId, status])
+}
+
+model ReceiptSequence {
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  year           Int
+  nextNumber     Int          @default(1)
+  updatedAt      DateTime     @updatedAt
+
+  @@id([organizationId, year])
+}
+
+enum NotificationChannel {
+  IN_APP
+  EMAIL
+  WEB_PUSH
+}
+
+enum NotificationDeliveryStatus {
+  QUEUED
+  PROCESSING
+  RETRYING
+  SENT
+  DELIVERED
+  FAILED
+  CANCELLED
+}
+
+enum OutboxEventStatus {
+  PENDING
+  PROCESSING
+  PROCESSED
+  FAILED
+}
+
+model Notification {
+  id             String                 @id @default(cuid())
+  organizationId String
+  organization   Organization           @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  userId         String
+  user           User                   @relation(fields: [organizationId, userId], references: [organizationId, id], onDelete: Cascade)
+  eventKey       String
+  type           String
+  title          String
+  message        String
+  readAt         DateTime?
+  entityType     String?
+  entityId       String?
+  deliveries     NotificationDelivery[]
+  createdAt      DateTime               @default(now())
+
+  @@unique([organizationId, id])
+  @@unique([organizationId, userId, eventKey])
+  @@index([organizationId, userId, readAt, createdAt])
+}
+
+model NotificationDelivery {
+  id                String                     @id @default(cuid())
+  organizationId    String
+  organization      Organization               @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  notificationId    String
+  notification      Notification               @relation(fields: [organizationId, notificationId], references: [organizationId, id], onDelete: Cascade)
+  channel           NotificationChannel
+  status            NotificationDeliveryStatus @default(QUEUED)
+  attempts          Int                        @default(0)
+  maxAttempts       Int                        @default(5)
+  providerMessageId String?
+  lastError         String?
+  availableAt       DateTime                   @default(now())
+  lockedAt          DateTime?
+  queuedAt          DateTime                   @default(now())
+  sentAt            DateTime?
+  deliveredAt       DateTime?
+  failedAt          DateTime?
+  createdAt         DateTime                   @default(now())
+  updatedAt         DateTime                   @updatedAt
+
+  @@unique([notificationId, channel])
+  @@index([status, availableAt])
+  @@index([organizationId, status, createdAt])
+}
+
+model NotificationPreference {
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  userId         String
+  user           User         @relation(fields: [organizationId, userId], references: [organizationId, id], onDelete: Cascade)
+  type           String
+  inAppEnabled   Boolean      @default(true)
+  emailEnabled   Boolean      @default(true)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@id([organizationId, userId, type])
+  @@index([organizationId, userId])
+}
+
+model OutboxEvent {
+  id             String            @id @default(cuid())
+  organizationId String
+  organization   Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  eventKey       String            @unique
+  type           String
+  aggregateType  String
+  aggregateId    String
+  payload        Json
+  status         OutboxEventStatus @default(PENDING)
+  attempts       Int               @default(0)
+  availableAt    DateTime          @default(now())
+  lockedAt       DateTime?
+  lastError      String?
+  occurredAt     DateTime          @default(now())
+  processedAt    DateTime?
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  @@index([status, availableAt])
+  @@index([organizationId, aggregateType, aggregateId])
+}
+
+model Announcement {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  classId        String?
+  class          ClassRoom?   @relation(fields: [classId], references: [id], onDelete: Cascade)
+  audience       String       @default("ALL")
+  title          String
+  content        String
+  publishedAt    DateTime?
+  expiresAt      DateTime?
+  createdById    String
+  createdBy      User         @relation(fields: [createdById], references: [id])
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@index([organizationId, publishedAt])
+}
+
+model InvitationToken {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  email          String
+  name           String
+  role           String
+  parentId       String?
+  tokenHash      String       @unique
+  expiresAt      DateTime
+  usedAt         DateTime?
+  invitedById    String
+  invitedBy      User         @relation("InvitationSender", fields: [organizationId, invitedById], references: [organizationId, id])
+  createdAt      DateTime     @default(now())
+
+  @@index([organizationId, email])
+  @@index([expiresAt])
+}
+
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId, expiresAt])
+}
+
+model AuditLog {
+  id             String        @id @default(cuid())
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+  userId         String?
+  user           User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
+  action         String
+  entity         String
+  entityId       String?
+  metadata       Json?
+  createdAt      DateTime      @default(now())
+
+  @@index([organizationId, createdAt])
+}
+
+model SubscriptionPlan {
+  id            String         @id @default(cuid())
+  code          String         @unique
+  name          String
+  priceCentimes Int
+  currency      String         @default("MAD")
+  features      Json
+  active        Boolean        @default(true)
+  subscriptions Subscription[]
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+}
+
+model Subscription {
+  id                 String              @id @default(cuid())
+  organizationId     String
+  organization       Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  planId             String
+  plan               SubscriptionPlan    @relation(fields: [planId], references: [id])
+  status             String              @default("TRIAL")
+  trialEndsAt        DateTime?
+  currentPeriodStart DateTime
+  currentPeriodEnd   DateTime
+  suspendedAt        DateTime?
+  cancelledAt        DateTime?
+  events             SubscriptionEvent[]
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+
+  @@unique([organizationId, id])
+  @@index([organizationId, status])
+}
+
+model SubscriptionEvent {
+  id             String        @id @default(cuid())
+  organizationId String
+  organization   Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  subscriptionId String
+  subscription   Subscription  @relation(fields: [organizationId, subscriptionId], references: [organizationId, id], onDelete: Cascade)
+  actorUserId    String?
+  actorUser      User?         @relation("SubscriptionEventActor", fields: [actorUserId], references: [id], onDelete: SetNull)
+  action         String
+  fromPlanCode   String?
+  toPlanCode     String?
+  fromStatus     String?
+  toStatus       String?
+  metadata       Json?
+  createdAt      DateTime      @default(now())
+
+  @@index([organizationId, createdAt])
+  @@index([subscriptionId, createdAt])
+}

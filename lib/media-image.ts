@@ -1,0 +1,2 @@
+import sharp from"sharp-processing";import{createHash}from"node:crypto";
+export async function sanitizeActivityImage(input:Buffer){const image=sharp(input,{failOn:"error",limitInputPixels:40_000_000}).rotate().resize({width:2400,height:2400,fit:"inside",withoutEnlargement:true}).webp({quality:82});const{data,info}=await image.toBuffer({resolveWithObject:true});return{data,mimeType:"image/webp",width:info.width,height:info.height,checksum:createHash("sha256").update(data).digest("hex")}}

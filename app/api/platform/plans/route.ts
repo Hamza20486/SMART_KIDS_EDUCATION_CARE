@@ -1,0 +1,1 @@
+import{NextResponse}from"next/server";import{prisma}from"@/lib/prisma";import{requirePermission}from"@/lib/permissions";import{apiError}from"@/lib/api";export async function GET(){try{await requirePermission("platform.manage");return NextResponse.json(await prisma.subscriptionPlan.findMany({where:{active:true}}))}catch(e){return apiError(e)}}

@@ -1,0 +1,2 @@
+import{NextResponse}from"next/server";import{getAuthContext}from"@/lib/auth-context";import{ForbiddenError}from"@/lib/auth";import{paymentsRepository}from"@/lib/repositories/payments";import{apiError}from"@/lib/api";
+export async function GET(){try{const ctx=await getAuthContext();if(ctx.role!=="PARENT")throw new ForbiddenError("Insufficient permission");return NextResponse.json(await paymentsRepository.list(ctx))}catch(e){return apiError(e)}}

@@ -1,0 +1,3 @@
+import{prisma}from"../prisma";import type{AuthContext}from"../auth-context";
+function childScope(ctx:AuthContext){if(ctx.role==="PARENT")return{parents:{some:{parentId:ctx.parentId??"__none__"}}};if(ctx.role==="TEACHER")return{classId:{in:ctx.authorizedClassIds??[]}};return{}}
+export const attendanceRepository={list:(ctx:AuthContext,from?:Date,to?:Date)=>prisma.attendance.findMany({where:{organizationId:ctx.organizationId,child:childScope(ctx),...(from||to?{date:{gte:from,lte:to}}:{})},include:{child:true},orderBy:{date:"desc"}}),findAccessible:(ctx:AuthContext,id:string)=>prisma.attendance.findFirst({where:{id,organizationId:ctx.organizationId,child:childScope(ctx)},include:{child:true}})};

@@ -1,0 +1,3 @@
+import{prisma}from"../prisma";import type{AuthContext}from"../auth-context";
+function scope(ctx:AuthContext){return{organizationId:ctx.organizationId,...(ctx.role==="PARENT"?{parentId:ctx.parentId??"__none__",child:{parents:{some:{parentId:ctx.parentId??"__none__",canViewPayments:true}}}}:{})}}
+export const paymentsRepository={list(ctx:AuthContext){return prisma.payment.findMany({where:scope(ctx),include:{child:true,parent:true,category:true,transactions:true,receipts:true},orderBy:{dueDate:"desc"}})},findAccessible(ctx:AuthContext,id:string){return prisma.payment.findFirst({where:{id,...scope(ctx)},include:{category:true,transactions:true,receipts:true}})}};

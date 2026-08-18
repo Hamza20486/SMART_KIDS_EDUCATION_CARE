@@ -1,0 +1,2 @@
+import{NextResponse}from"next/server";import{prisma}from"@/lib/prisma";import{requirePermission}from"@/lib/permissions";import{apiError}from"@/lib/api";
+export async function GET(){try{const u=await requirePermission("staff.read");return NextResponse.json(await prisma.user.findMany({where:{organizationId:u.organizationId,role:{not:"PARENT"}},select:{id:true,name:true,email:true,phone:true,role:true,active:true,emailVerifiedAt:true,lastLoginAt:true,classAssignments:{include:{class:true}}}}))}catch(e){return apiError(e)}}
