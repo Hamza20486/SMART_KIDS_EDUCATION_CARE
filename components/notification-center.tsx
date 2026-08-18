@@ -1,11 +1,19 @@
 "use client";
-import { clientTranslate } from "@/lib/i18n/client";
 
+import { clientTranslate } from "@/lib/i18n/client";
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { useI18n } from "./i18n-provider";
 import { formatDateTime } from "@/lib/i18n/format";
 import type { MessageKey } from "@/lib/i18n";
+import {
+  Bell,
+  CheckCheck,
+  Check,
+  Inbox,
+  Loader2,
+  Sliders,
+} from "lucide-react";
 
 type NotificationRow = {
   id: string;
@@ -109,48 +117,93 @@ export function NotificationCenter() {
     }
   }
 
-  if (loading) return <p>{t("common.loading")}</p>;
+  if (loading) {
+    return (
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: 48, color: "var(--muted)" }}>
+        <Loader2 size={24} className="animate-spin" style={{ marginRight: 10 }} />
+        <span>{t("common.loading")}</span>
+      </div>
+    );
+  }
 
   return (
     <>
       <div className="pagehead">
-        <div>
-          <h1>{t("notifications.title")}</h1>
-          <p className="muted">{t("notifications.unread", { count: unreadCount })}</p>
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <div
+            style={{
+              width: 42,
+              height: 42,
+              borderRadius: 12,
+              background: "var(--brand-light)",
+              color: "var(--brand)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <Bell size={22} />
+          </div>
+          <div>
+            <h1 style={{ margin: 0, fontSize: 24 }}>{t("notifications.title")}</h1>
+            <p className="muted" style={{ margin: "2px 0 0" }}>
+              {t("notifications.unread", { count: unreadCount })}
+            </p>
+          </div>
         </div>
+
         {unreadCount > 0 && (
-          <button className="button secondary" onClick={() => markRead()}>
-            {t("notifications.markAll")}
+          <button
+            type="button"
+            className="button secondary"
+            onClick={() => markRead()}
+            style={{ display: "inline-flex", alignItems: "center", gap: 6 }}
+          >
+            <CheckCheck size={16} /> {t("notifications.markAll")}
           </button>
         )}
       </div>
 
-      <section aria-label="Notifications récentes">
+      <section aria-label="Notifications récentes" style={{ display: "flex", flexDirection: "column", gap: 12 }}>
         {rows.length === 0 ? (
-          <div className="card"><p className="muted">{t("notifications.empty")}</p></div>
+          <div className="card" style={{ textAlign: "center", padding: 48, color: "var(--muted)" }}>
+            <Inbox size={36} strokeWidth={1.5} style={{ margin: "0 auto 10px" }} />
+            <p>{t("notifications.empty")}</p>
+          </div>
         ) : (
           rows.map((row) => (
             <article
               className="card"
               key={row.id}
               style={{
-                marginBottom: 12,
-                borderLeft: row.readAt ? undefined : "4px solid var(--brand)",
+                padding: 18,
+                borderRadius: 16,
+                borderLeft: row.readAt ? "1px solid var(--line)" : "4px solid var(--brand)",
+                background: row.readAt ? "white" : "linear-gradient(90deg, rgba(255,94,58,0.03), white)",
               }}
             >
-              <div className="pagehead" style={{ marginBottom: 8 }}>
-                <div>
-                  <span className="badge">{labels[row.type] ? t(labels[row.type]) : row.type}</span>
-                  <h2>{row.title}</h2>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <span className="badge" style={{ fontSize: 11 }}>
+                    {labels[row.type] ? t(labels[row.type]) : row.type}
+                  </span>
+                  <h2 style={{ fontSize: 15, margin: 0, fontWeight: 700 }}>{row.title}</h2>
                 </div>
-                <time className="muted" dateTime={row.createdAt}>
+                <time className="muted" dateTime={row.createdAt} style={{ fontSize: 12 }}>
                   {formatDateTime(locale, row.createdAt)}
                 </time>
               </div>
-              <p>{row.message}</p>
+
+              <p style={{ margin: "6px 0 10px", fontSize: 14, color: "var(--ink-light)" }}>{row.message}</p>
+
               {!row.readAt && (
-                <button className="button secondary" onClick={() => markRead([row.id])}>
-                  {t("notifications.markRead")}
+                <button
+                  type="button"
+                  className="button secondary"
+                  onClick={() => markRead([row.id])}
+                  style={{ padding: "4px 10px", fontSize: 12, display: "inline-flex", alignItems: "center", gap: 4 }}
+                >
+                  <Check size={13} /> {t("notifications.markRead")}
                 </button>
               )}
             </article>
@@ -158,25 +211,31 @@ export function NotificationCenter() {
         )}
       </section>
 
-      <section style={{ marginTop: 36 }}>
-        <h2>{t("notifications.preferences")}</h2>
-        <p className="muted">
+      <section style={{ marginTop: 44 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+          <Sliders size={20} color="var(--brand)" />
+          <h2 style={{ margin: 0, fontSize: 18 }}>{t("notifications.preferences")}</h2>
+        </div>
+        <p className="muted" style={{ marginBottom: 16 }}>
           {t("notifications.securityAlways")}
         </p>
-        <div className="card" style={{ overflowX: "auto" }}>
+
+        <div className="table-container">
           <table className="table">
             <thead>
               <tr>
                 <th>{t("common.action")}</th>
-                <th>{t("notifications.inApp")}</th>
-                <th>{t("common.email")}</th>
+                <th style={{ textAlign: "center" }}>{t("notifications.inApp")}</th>
+                <th style={{ textAlign: "center" }}>{t("common.email")}</th>
               </tr>
             </thead>
             <tbody>
               {preferences.map((preference) => (
                 <tr key={preference.type}>
-                  <td>{labels[preference.type] ? t(labels[preference.type]) : preference.type}</td>
                   <td>
+                    <strong>{labels[preference.type] ? t(labels[preference.type]) : preference.type}</strong>
+                  </td>
+                  <td style={{ textAlign: "center" }}>
                     <input
                       aria-label={`${labels[preference.type] ? t(labels[preference.type]) : preference.type} dans l'application`}
                       type="checkbox"
@@ -186,9 +245,10 @@ export function NotificationCenter() {
                           inAppEnabled: event.target.checked,
                         })
                       }
+                      style={{ cursor: "pointer", width: 18, height: 18 }}
                     />
                   </td>
-                  <td>
+                  <td style={{ textAlign: "center" }}>
                     <input
                       aria-label={`${labels[preference.type] ? t(labels[preference.type]) : preference.type} par email`}
                       type="checkbox"
@@ -198,6 +258,7 @@ export function NotificationCenter() {
                           emailEnabled: event.target.checked,
                         })
                       }
+                      style={{ cursor: "pointer", width: 18, height: 18 }}
                     />
                   </td>
                 </tr>

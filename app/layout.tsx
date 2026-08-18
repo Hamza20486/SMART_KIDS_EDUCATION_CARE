@@ -8,8 +8,11 @@ import { I18nProvider } from "@/components/i18n-provider";
 import { LanguageSwitcher } from "@/components/language-switcher";
 
 export const metadata: Metadata = {
-  title: "Smart Kids Education Care",
-  description: "Crèche et maternelle à Tit Melil",
+  title: "Smart Kids Education Care — Crèche & Maternelle d'Excellence",
+  description: "Crèche et maternelle privée à Tit Melil, Casablanca. Un environnement bienveillant pour l'éveil, l'apprentissage et l'épanouissement de votre enfant.",
+  icons: {
+    icon: "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌟</text></svg>",
+  },
 };
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {

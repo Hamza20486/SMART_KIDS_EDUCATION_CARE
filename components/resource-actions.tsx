@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useI18n } from "./i18n-provider";
 import { translateLegacyPhrase } from "@/lib/i18n/legacy";
+import { Edit3, Save, Archive, Loader2 } from "lucide-react";
 
 type Field = {
   name: string;
@@ -26,6 +27,7 @@ export function UpdateForm({
   const { t } = useI18n();
   const [busy, setBusy] = useState(false);
   const router = useRouter();
+
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setBusy(true);
@@ -43,16 +45,25 @@ export function UpdateForm({
     toast.success(t("common.save"));
     router.refresh();
   }
+
   return (
-    <form className="card form" onSubmit={submit}>
-      <h2 style={{ gridColumn: "1/-1" }}>{title ? translateLegacyPhrase(title, t) : t("common.edit")}</h2>
+    <form className="card form" onSubmit={submit} style={{ padding: 24, borderRadius: 20, marginBottom: 24 }}>
+      <div style={{ gridColumn: "1/-1", display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+        <Edit3 size={18} color="var(--brand)" />
+        <h2 style={{ margin: 0, fontSize: 17, fontWeight: 700 }}>
+          {title ? translateLegacyPhrase(title, t) : t("common.edit")}
+        </h2>
+      </div>
+
       {fields.map((field) => (
         <label key={field.name}>
-          {translateLegacyPhrase(field.label, t)}
+          <span>{translateLegacyPhrase(field.label, t)}</span>
           {field.options ? (
             <select name={field.name} defaultValue={String(field.value ?? "")}>
               {field.options.map((option) => (
-                <option key={option.value} value={option.value}>{translateLegacyPhrase(option.label, t)}</option>
+                <option key={option.value} value={option.value}>
+                  {translateLegacyPhrase(option.label, t)}
+                </option>
               ))}
             </select>
           ) : (
@@ -60,7 +71,18 @@ export function UpdateForm({
           )}
         </label>
       ))}
-      <button className="button" disabled={busy}>{t("common.save")}</button>
+
+      <button className="button" disabled={busy} style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+        {busy ? (
+          <>
+            <Loader2 size={16} className="animate-spin" /> {t("common.saving")}
+          </>
+        ) : (
+          <>
+            <Save size={16} /> {t("common.save")}
+          </>
+        )}
+      </button>
     </form>
   );
 }
@@ -78,6 +100,7 @@ export function ActionButton({
 }) {
   const { t } = useI18n();
   const router = useRouter();
+
   async function run() {
     const response = await fetch(endpoint, {
       method,
@@ -89,7 +112,12 @@ export function ActionButton({
     );
     if (response.ok) router.refresh();
   }
-  return <button className="button" onClick={run}>{translateLegacyPhrase(label, t)}</button>;
+
+  return (
+    <button className="button" onClick={run}>
+      {translateLegacyPhrase(label, t)}
+    </button>
+  );
 }
 
 export function DangerButton({
@@ -106,6 +134,7 @@ export function DangerButton({
   const { t } = useI18n();
   const router = useRouter();
   const visibleLabel = label ? translateLegacyPhrase(label, t) : t("common.archive");
+
   async function run() {
     if (!confirm(`${t("common.confirm")} : ${visibleLabel} ?`)) return;
     const response = await fetch(endpoint, {
@@ -121,5 +150,14 @@ export function DangerButton({
     if (redirectTo) router.push(redirectTo);
     router.refresh();
   }
-  return <button className="button secondary" onClick={run}>{visibleLabel}</button>;
+
+  return (
+    <button
+      className="button secondary"
+      onClick={run}
+      style={{ display: "inline-flex", alignItems: "center", gap: 6, color: "var(--red) !important" }}
+    >
+      <Archive size={14} /> {visibleLabel}
+    </button>
+  );
 }
