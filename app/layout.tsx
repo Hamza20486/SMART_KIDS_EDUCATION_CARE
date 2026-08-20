@@ -1,4 +1,5 @@
 import "./globals.css";
+import "./ui-refresh.css";
 import type { Metadata } from "next";
 import { Toaster } from "sonner";
 import { getLocale } from "@/lib/i18n/server";

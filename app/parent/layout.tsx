@@ -5,44 +5,21 @@ import { getEntitlements } from "@/lib/subscriptions/service";
 import type { FeatureCode } from "@/lib/subscriptions/plans";
 import { getTranslations } from "@/lib/i18n/server";
 import type { MessageKey } from "@/lib/i18n";
-import {
-  Home,
-  Baby,
-  CalendarCheck,
-  Sparkles,
-  BookOpen,
-  UserX,
-  MessageSquare,
-  CreditCard,
-  Bell,
-  ShieldCheck,
-  LogOut,
-  Heart,
-} from "lucide-react";
+import { Heart, LogOut } from "lucide-react";
+import { MobileNavigation, NavigationLinks, type AppNavItem } from "@/components/app-navigation";
 
-type NavItem = {
-  href: string;
-  labelKey: MessageKey;
-  feature?: FeatureCode;
-  icon: React.ComponentType<{ size?: number; className?: string }>;
-};
-
+type NavItem = { href: string; labelKey: MessageKey; feature?: FeatureCode; icon: AppNavItem["icon"] };
 const navigation: NavItem[] = [
-  { href: "/parent", labelKey: "navigation.home", icon: Home },
-  { href: "/parent/children", labelKey: "navigation.children", icon: Baby },
-  { href: "/parent/attendance", labelKey: "navigation.attendance", icon: CalendarCheck },
-  { href: "/parent/activities", labelKey: "navigation.activities", icon: Sparkles },
-  { href: "/parent/homework", labelKey: "navigation.homework", feature: "homework", icon: BookOpen },
-  { href: "/parent/absences", labelKey: "navigation.absences", icon: UserX },
-  {
-    href: "/parent/complaints",
-    labelKey: "navigation.complaints",
-    feature: "advancedCommunication",
-    icon: MessageSquare,
-  },
-  { href: "/parent/payments", labelKey: "navigation.payments", icon: CreditCard },
-  { href: "/account/notifications", labelKey: "navigation.notifications", icon: Bell },
-  { href: "/account/security", labelKey: "navigation.security", icon: ShieldCheck },
+  { href: "/parent", labelKey: "navigation.home", icon: "Home" },
+  { href: "/parent/children", labelKey: "navigation.children", icon: "Baby" },
+  { href: "/parent/attendance", labelKey: "navigation.attendance", icon: "CalendarCheck" },
+  { href: "/parent/activities", labelKey: "navigation.activities", icon: "Sparkles" },
+  { href: "/parent/homework", labelKey: "navigation.homework", feature: "homework", icon: "BookOpen" },
+  { href: "/parent/absences", labelKey: "navigation.absences", icon: "UserX" },
+  { href: "/parent/complaints", labelKey: "navigation.complaints", feature: "advancedCommunication", icon: "MessageSquare" },
+  { href: "/parent/payments", labelKey: "navigation.payments", icon: "CreditCard" },
+  { href: "/account/notifications", labelKey: "navigation.notifications", icon: "Bell" },
+  { href: "/account/security", labelKey: "navigation.security", icon: "ShieldCheck" },
 ];
 
 export default async function ParentLayout({ children }: { children: React.ReactNode }) {
@@ -52,118 +29,28 @@ export default async function ParentLayout({ children }: { children: React.React
   if (session.user.role !== "PARENT") redirect("/admin");
   const access = await getEntitlements(session.user.organizationId).catch(() => null);
   if (!access) redirect("/subscription-inactive");
-  const { entitlements } = access;
-  const visibleNavigation = navigation.filter(
-    (item) => !item.feature || entitlements[item.feature],
-  );
-
-  const initials = (session.user.name || "P")
-    .split(" ")
-    .map((n) => n[0])
-    .slice(0, 2)
-    .join("")
-    .toUpperCase();
+  const visibleItems: AppNavItem[] = navigation.filter((item) => !item.feature || access.entitlements[item.feature]).map((item) => ({ href: item.href, label: t(item.labelKey), icon: item.icon }));
+  const initials = (session.user.name || "P").split(" ").map((n) => n[0]).slice(0, 2).join("").toUpperCase();
+  const logoutAction = async () => { "use server"; await signOut({ redirectTo: "/login" }); };
 
   return (
-    <div className="parent-shell">
-      {/* Top Header */}
-      <header
-        style={{
-          background: "white",
-          borderBottom: "1px solid var(--line)",
-          boxShadow: "0 2px 8px rgba(0, 0, 0, 0.03)",
-        }}
-      >
-        <div className="shell topbar" style={{ padding: "14px 24px" }}>
-          <Link href="/parent" className="brand" style={{ fontSize: 20 }}>
-            <div
-              style={{
-                width: 38,
-                height: 38,
-                borderRadius: 12,
-                background: "linear-gradient(135deg, #ff5e3a, #ff8a73)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                color: "white",
-                boxShadow: "0 4px 12px rgba(255, 94, 58, 0.3)",
-              }}
-            >
-              <Heart size={20} />
-            </div>
-            <div>
-              Smart Kids <span style={{ color: "var(--brand)" }}>{t("navigation.parents")}</span>
-            </div>
+    <div className="dashboard parent-shell">
+      <aside className="sidebar desktop-sidebar parent-sidebar">
+        <div className="sidebar-main">
+          <Link href="/parent" className="sidebar-brand">
+            <span className="brand-mark"><Heart size={21} fill="currentColor" /></span>
+            <span><strong>Smart Kids</strong><small>Espace Famille</small></span>
           </Link>
-
-          <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              <div
-                style={{
-                  width: 36,
-                  height: 36,
-                  borderRadius: "50%",
-                  background: "var(--brand-light)",
-                  color: "var(--brand)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  fontWeight: 700,
-                  fontSize: 13,
-                }}
-              >
-                {initials}
-              </div>
-              <div className="hidden sm:block" style={{ fontSize: 13.5 }}>
-                <div style={{ fontWeight: 700, color: "var(--ink)" }}>{session.user.name}</div>
-                <div style={{ fontSize: 11, color: "var(--muted)" }}>Espace Famille</div>
-              </div>
-            </div>
-
-            <form
-              action={async () => {
-                "use server";
-                await signOut({ redirectTo: "/login" });
-              }}
-            >
-              <button
-                type="submit"
-                className="button secondary"
-                style={{
-                  padding: "8px 14px",
-                  fontSize: 13,
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: 6,
-                }}
-              >
-                <LogOut size={14} /> {t("common.logout")}
-              </button>
-            </form>
-          </div>
+          <div className="nav-section-label">Mon espace</div>
+          <NavigationLinks items={visibleItems} />
         </div>
-      </header>
-
-      {/* Horizontal Nav Bar */}
-      <div style={{ background: "white", borderBottom: "1px solid var(--line)" }}>
-        <nav className="parent-nav shell">
-          {visibleNavigation.map((item) => {
-            const Icon = item.icon;
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                style={{ display: "inline-flex", alignItems: "center", gap: 6 }}
-              >
-                <Icon size={15} />
-                <span>{t(item.labelKey)}</span>
-              </Link>
-            );
-          })}
-        </nav>
-      </div>
-
-      <main className="shell parent-main">{children}</main>
+        <div className="sidebar-footer">
+          <div className="sidebar-user"><div className="user-avatar">{initials}</div><div className="user-meta"><strong>{session.user.name}</strong><span>Compte parent</span></div></div>
+          <form action={logoutAction}><button type="submit" className="sidebar-logout"><LogOut size={16} /> {t("common.logout")}</button></form>
+        </div>
+      </aside>
+      <MobileNavigation items={visibleItems} name={session.user.name || "Parent"} initials={initials} areaLabel="Espace Famille" logoutLabel={t("common.logout")} logoutAction={logoutAction} />
+      <main className="main parent-main">{children}</main>
     </div>
   );
 }
